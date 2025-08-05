@@ -70,6 +70,7 @@ def analyze_stocks():
             close = df["Close"].iloc[-1]
             open_price = df["Open"].iloc[-1]
             recent_high = df["Close"].iloc[-10:].max()
+            recent_low = float(df["Close"].iloc[-10:].min())
 
             # Convert to float explicitly (avoids Series ambiguity)
             today_vol = float(today_vol)
@@ -98,7 +99,7 @@ def analyze_stocks():
 
         if score >= 90:
             name = s.replace("^NSEI", "NIFTY").replace("^NSEBANK", "BANKNIFTY")
-            msg = (f"🚀 High Probability Move Detected: {name}\n"
+            msg = (f"🚀 High Probability Bullish Move Detected: {name}\n"
                    f"📈 Change: {change_percent:.2f}%\n"
                    f"📊 RSI: {rsi:.1f}, SMA5: {sma5:.2f} > SMA20: {sma20:.2f}\n"
                    f"🔊 Vol: {today_vol:,} vs Avg: {avg_vol:,.0f}\n"
@@ -107,7 +108,33 @@ def analyze_stocks():
             messages.append(msg)
             print(f"✅ {s} passed:\n{msg}\n")
         else:
-            print(f"❌ {s} score {score}, skipping.")
+            print(f"❌ {s} bullish score {score}, skipping.")
+
+        # Bearish Score
+        bear_score = 0
+        if sma5 < sma20 and sma5_prev > sma20_prev:
+            bear_score += 30
+        if 30 < rsi < 45:
+            bear_score += 20
+        if today_vol > 1.5 * avg_vol:
+            bear_score += 20
+        if close <= 1.02 * recent_low:
+            bear_score += 15
+        if change_percent < -0.8:
+            bear_score += 15
+
+        if bear_score >= 90:
+            name = s.replace("^NSEI", "NIFTY").replace("^NSEBANK", "BANKNIFTY")
+            msg = (f"🔻 Bearish Signal: {name}\n"
+                   f"📉 Change: {change_percent:.2f}%\n"
+                   f"📊 RSI: {rsi:.1f}, SMA5: {sma5:.2f} < SMA20: {sma20:.2f}\n"
+                   f"🔊 Vol: {today_vol:,} vs Avg: {avg_vol:,.0f}\n"
+                   f"🎯 Close: {close:.2f} (10d Low: {recent_low:.2f})\n"
+                   f"⚠️ Confidence Score: {bear_score}/100")
+            messages.append(msg)
+            print(f"✅ Bearish {s}:\n{msg}\n")
+        else:
+            print(f"❌ {s} bearish score {bear_score}, skipping.")
 
     if not messages:
         messages.append("⚠️ No high-confidence signals today.")
@@ -123,7 +150,7 @@ def send_telegram(msg):
 
 if __name__ == "__main__":
     picks = analyze_stocks()
-    message = "🔔 Dynamic bullish picks from today's gainers:\n\n"
+    message = "🔔 Dynamic bullish/bearish picks from today's gainers/losers:\n\n"
 
 if picks:
     message += "\n\n".join(picks)
