@@ -17,6 +17,16 @@ def get_top_gainers():
         return []
 
 
+def get_top_losers():
+    nse = Nse()
+    try:
+        top = nse.get_top_losers()
+        return [item["symbol"] + ".NS" for item in top[:10]]
+    except Exception as e:
+        print("Error using nsetools:", e)
+        return []
+
+
 def compute_rsi(data, window=14):
     delta = data["Close"].diff()
     gain = delta.where(delta > 0, 0)
@@ -36,7 +46,7 @@ def analyze_stocks():
 
     messages = []
     indices = ["^NSEI", "^NSEBANK"]  # Nifty 50, Bank Nifty
-    symbols = get_top_gainers() + indices
+    symbols = get_top_gainers() + get_top_losers() + indices
 
     for s in symbols:
         df = yf.download(s,
@@ -97,7 +107,7 @@ def analyze_stocks():
         if change_percent > 0.8:
             score += 15
 
-        if score >= 90:
+        if score >= 50:  # should be 90, atleast more than 50
             name = s.replace("^NSEI", "NIFTY").replace("^NSEBANK", "BANKNIFTY")
             msg = (f"🚀 High Probability Bullish Move Detected: {name}\n"
                    f"📈 Change: {change_percent:.2f}%\n"
@@ -123,7 +133,7 @@ def analyze_stocks():
         if change_percent < -0.8:
             bear_score += 15
 
-        if bear_score >= 90:
+        if bear_score >= 50:  # should be 90, atleast more than 50
             name = s.replace("^NSEI", "NIFTY").replace("^NSEBANK", "BANKNIFTY")
             msg = (f"🔻 Bearish Signal: {name}\n"
                    f"📉 Change: {change_percent:.2f}%\n"
